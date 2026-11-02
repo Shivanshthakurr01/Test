@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Crop &amp; Compress</title>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#E8EDEB; --panel:#F6F8F7; --stage:#D6DFDC; --ink:#16242B; --muted:#52646B;
+  --line:#C5D0CD; --line-strong:#8FA19D; --track:#CBD6D3; --grid:rgba(22,36,43,.08);
+  --accent:#1F3FBF; --accent-hover:#183299; --on-accent:#fff; --warn:#9A4B00;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    color-scheme:dark;
+    --bg:#10181C; --panel:#172126; --stage:#0B1114; --ink:#E7EEF0; --muted:#97A8AF;
+    --line:#2A3A41; --line-strong:#5A6F77; --track:#2A3A41; --grid:rgba(231,238,240,.07);
+    --accent:#8CA0FF; --accent-hover:#A9B8FF; --on-accent:#0A1033; --warn:#F2A65A;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 "Gill Sans","Gill Sans MT","Trebuchet MS","Segoe UI",system-ui,sans-serif;min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px clamp(16px,3vw,32px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.brand svg{color:var(--accent)}
+.top-right{display:flex;align-items:center;gap:12px;min-width:0}
+.fname{max-width:28ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:14px}
+main{padding:clamp(16px,3vw,32px)}
+
+/* buttons */
+.btn{min-height:44px;padding:10px 18px;border-radius:8px;border:1px solid var(--line-strong);background:transparent;cursor:pointer;font-weight:600}
+.btn:hover{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.small{min-height:36px;padding:6px 12px;font-size:14px}
+
+/* empty state: a viewfinder */
+.viewfinder{position:relative;max-width:880px;margin:5vh auto 0;padding:clamp(48px,9vw,96px) clamp(28px,6vw,72px);text-align:center;
+  background-image:
+    linear-gradient(to right,transparent calc(33.333% - .5px),var(--grid) calc(33.333% - .5px),var(--grid) calc(33.333% + .5px),transparent calc(33.333% + .5px)),
+    linear-gradient(to right,transparent calc(66.666% - .5px),var(--grid) calc(66.666% - .5px),var(--grid) calc(66.666% + .5px),transparent calc(66.666% + .5px)),
+    linear-gradient(to bottom,transparent calc(33.333% - .5px),var(--grid) calc(33.333% - .5px),var(--grid) calc(33.333% + .5px),transparent calc(33.333% + .5px)),
+    linear-gradient(to bottom,transparent calc(66.666% - .5px),var(--grid) calc(66.666% - .5px),var(--grid) calc(66.666% + .5px),transparent calc(66.666% + .5px))}
+.vf{position:absolute;width:56px;height:56px;border:0 solid var(--accent);pointer-events:none}
+.c-nw{top:var(--o,0);left:var(--o,0);border-top-width:6px;border-left-width:6px}
+.c-ne{top:var(--o,0);right:var(--o,0);border-top-width:6px;border-right-width:6px}
+.c-sw{bottom:var(--o,0);left:var(--o,0);border-bottom-width:6px;border-left-width:6px}
+.c-se{bottom:var(--o,0);right:var(--o,0);border-bottom-width:6px;border-right-width:6px}
+.viewfinder h1{margin:0 auto 16px;max-width:17ch;font-size:clamp(30px,5.4vw,54px);line-height:1.06;font-weight:700;letter-spacing:-.015em}
+.viewfinder p{margin:0 auto 24px;max-width:46ch;color:var(--muted);font-size:18px}
+.viewfinder .hint{margin:16px auto 0;font-size:14px}
+
+/* workspace */
+.work{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start;max-width:1280px;margin:0 auto}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;min-height:40px}
+.tb-right{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:8px 14px;min-height:40px;cursor:pointer;font-weight:600}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.seg button:focus-visible{outline-offset:-3px}
+.stage{background:var(--stage);border-radius:12px;padding:16px;min-height:300px;display:flex;justify-content:center;align-items:center}
+.frame{position:relative;display:inline-block;line-height:0;overflow:hidden;user-select:none;-webkit-user-select:none;cursor:crosshair}
+.frame img{display:block;max-width:none;-webkit-user-drag:none;user-select:none}
+.crop{position:absolute;cursor:move;touch-action:none;outline:1px solid rgba(255,255,255,.92);outline-offset:-1px;
+  box-shadow:0 0 0 9999px rgba(8,14,17,.6);
+  background-image:
+    linear-gradient(to right,transparent calc(33.333% - .5px),rgba(255,255,255,.38) calc(33.333% - .5px),rgba(255,255,255,.38) calc(33.333% + .5px),transparent calc(33.333% + .5px)),
+    linear-gradient(to right,transparent calc(66.666% - .5px),rgba(255,255,255,.38) calc(66.666% - .5px),rgba(255,255,255,.38) calc(66.666% + .5px),transparent calc(66.666% + .5px)),
+    linear-gradient(to bottom,transparent calc(33.333% - .5px),rgba(255,255,255,.38) calc(33.333% - .5px),rgba(255,255,255,.38) calc(33.333% + .5px),transparent calc(33.333% + .5px)),
+    linear-gradient(to bottom,transparent calc(66.666% - .5px),rgba(255,255,255,.38) calc(66.666% - .5px),rgba(255,255,255,.38) calc(66.666% + .5px),transparent calc(66.666% + .5px))}
+.crop:focus-visible{outline:2px solid #fff;outline-offset:-2px;box-shadow:0 0 0 3px #9FB2FF,0 0 0 9999px rgba(8,14,17,.6)}
+.h{position:absolute;width:32px;height:32px;touch-action:none;display:block}
+.h::after{content:"";position:absolute;background:#fff}
+.h-n{left:50%;top:-16px;margin-left:-24px;width:48px;cursor:ns-resize}
+.h-s{left:50%;bottom:-16px;margin-left:-24px;width:48px;cursor:ns-resize}
+.h-w{top:50%;left:-16px;margin-top:-24px;height:48px;cursor:ew-resize}
+.h-e{top:50%;right:-16px;margin-top:-24px;height:48px;cursor:ew-resize}
+.h-nw{left:-16px;top:-16px;cursor:nwse-resize}
+.h-ne{right:-16px;top:-16px;cursor:nesw-resize}
+.h-sw{left:-16px;bottom:-16px;cursor:nesw-resize}
+.h-se{right:-16px;bottom:-16px;cursor:nwse-resize}
+.h-n::after,.h-s::after{left:50%;margin-left:-14px;width:28px;height:4px}
+.h-n::after{top:14px}.h-s::after{bottom:14px}
+.h-w::after,.h-e::after{top:50%;margin-top:-14px;height:28px;width:4px}
+.h-w::after{left:14px}.h-e::after{right:14px}
+.h-nw::after,.h-ne::after,.h-sw::after,.h-se::after{width:18px;height:18px;background:none;border:0 solid #fff}
+.h-nw::after{left:15px;top:15px;border-left-width:4px;border-top-width:4px}
+.h-ne::after{right:15px;top:15px;border-right-width:4px;border-top-width:4px}
+.h-sw::after{left:15px;bottom:15px;border-left-width:4px;border-bottom-width:4px}
+.h-se::after{right:15px;bottom:15px;border-right-width:4px;border-bottom-width:4px}
+
+.previewwrap{width:100%;overflow:auto;max-height:min(72vh,860px);display:flex}
+.previewwrap img{display:block;margin:auto;max-width:100%;max-height:min(72vh,860px);width:auto;height:auto;
+  background:repeating-conic-gradient(rgba(128,128,128,.28) 0 25%,transparent 0 50%) 0 0/16px 16px}
+.previewwrap.actual img{max-width:none;max-height:none}
+.previewwrap.actual{display:block}
+.previewwrap.actual img{margin:0}
+
+/* sidebar */
+.side{background:var(--panel);border:1px solid var(--line);border-radius:12px;position:sticky;top:16px}
+.sec{padding:16px 18px;border-top:1px solid var(--line)}
+.sec:first-child{border-top:0}
+.sec h2{margin:0 0 10px;font-size:15px;font-weight:700}
+.saving{font-size:28px;font-weight:700;line-height:1.1;letter-spacing:-.01em}
+.bar{height:8px;border-radius:4px;background:var(--track);margin:10px 0 14px;overflow:hidden}
+.barfill{height:100%;width:0;background:var(--accent);border-radius:4px;transition:width .3s}
+.barfill.over{background:var(--warn)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 14px;font-variant-numeric:tabular-nums}
+.pair dt{font-size:13px;color:var(--muted)}
+.pair dd{margin:0;font-size:18px;font-weight:600}
+.pair dd.sub{font-size:13px;font-weight:400;color:var(--muted)}
+.note{margin:0 0 14px;font-size:14px;color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-height:38px;padding:6px 11px;border:1px solid var(--line-strong);border-radius:6px;background:transparent;cursor:pointer;font-size:15px}
+.chip:hover{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.sec-head h2{margin:0}
+select,input[type=number]{min-height:42px;padding:8px 10px;border:1px solid var(--line-strong);border-radius:8px;background:var(--panel)}
+select{width:100%}
+.row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;font-variant-numeric:tabular-nums}
+.row span:last-child{font-weight:600}
+input[type=range]{width:100%;accent-color:var(--accent);margin:6px 0 10px;min-height:28px}
+.limit{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.limit label{display:flex;align-items:center;gap:8px}
+.limit input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+.limit input[type=number]{width:92px}
+.help{margin:10px 0 0;font-size:14px;color:var(--muted)}
+.off .row,.off .limit,.off input[type=range]{opacity:.45}
+
+/* overlays */
+.veil{position:fixed;inset:0;z-index:40;display:grid;place-items:center;pointer-events:none;background:color-mix(in srgb,var(--bg) 88%,transparent);--o:24px;font-size:clamp(22px,4vw,34px);font-weight:700}
+.notice{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:8px;max-width:min(92vw,520px);font-size:15px}
+
+@media (max-width:900px){
+  .work{grid-template-columns:minmax(0,1fr)}
+  .side{position:static}
+  .viewfinder{margin-top:2vh}
+  .fname{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><path d="M6 2v16h16"/><path d="M2 6h16v16"/></svg>
+    <span>Crop &amp; Compress</span>
+  </div>
+  <div class="top-right" id="topRight" hidden>
+    <span class="fname" id="fname"></span>
+    <button class="btn small" id="another" type="button">Choose another</button>
+  </div>
+</header>
+
+<main>
+  <section id="empty">
+    <div class="viewfinder">
+      <span class="vf c-nw"></span><span class="vf c-ne"></span><span class="vf c-sw"></span><span class="vf c-se"></span>
+      <h1>Crop and compress images without uploading them</h1>
+      <p>Drop a photo anywhere on this page, paste one, or choose a file. It never leaves your device.</p>
+      <button class="btn primary" id="choose" type="button">Choose image</button>
+      <p class="hint">JPEG, PNG, WebP, GIF and AVIF files work.</p>
+    </div>
+  </section>
+
+  <section id="work" class="work" hidden>
+    <div>
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="View">
+          <button id="vCrop" type="button" aria-pressed="true">Crop</button>
+          <button id="vPrev" type="button" aria-pressed="false">Preview</button>
+        </div>
+        <div class="tb-right">
+          <span id="selReadout"></span>
+          <label id="actualWrap" hidden><input type="checkbox" id="actual"> Actual size</label>
+        </div>
+      </div>
+      <div class="stage" id="stage">
+        <div class="frame" id="frame">
+          <img id="photo" alt="Your image with the crop area on top">
+          <div class="crop" id="crop" tabindex="0" role="group" aria-label="Crop area. Arrow keys move it. Plus and minus keys resize it. Hold Shift for bigger steps.">
+            <i class="h h-n" data-h="n"></i><i class="h h-s" data-h="s"></i><i class="h h-w" data-h="w"></i><i class="h h-e" data-h="e"></i>
+            <i class="h h-nw" data-h="nw"></i><i class="h h-ne" data-h="ne"></i><i class="h h-sw" data-h="sw"></i><i class="h h-se" data-h="se"></i>
+          </div>
+        </div>
+        <div class="previewwrap" id="previewWrap" hidden><img id="result" alt="Compressed result"></div>
+      </div>
+    </div>
+
+    <aside class="side" aria-label="Settings">
+      <div class="sec">
+        <div class="saving" id="saving" aria-live="polite">Working…</div>
+        <div class="bar"><div class="barfill" id="barfill"></div></div>
+        <dl class="pair">
+          <div><dt>Original</dt><dd id="oSize">—</dd><dd class="sub" id="oDim"></dd></div>
+          <div><dt>Result</dt><dd id="rSize">—</dd><dd class="sub" id="rDim"></dd></div>
+        </dl>
+        <p class="note" id="note" hidden></p>
+        <button class="btn primary block" id="download" type="button" disabled>Download</button>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head"><h2>Crop shape</h2><button class="btn small" id="resetCrop" type="button">Reset crop</button></div>
+        <div class="chips" id="chips" role="group" aria-label="Crop shape"></div>
+      </div>
+
+      <div class="sec">
+        <h2><label for="side">Longest side</label></h2>
+        <select id="side"></select>
+      </div>
+
+      <div class="sec">
+        <h2 id="fmtLabel">Format</h2>
+        <div class="seg" role="group" aria-labelledby="fmtLabel" id="fmtSeg">
+          <button type="button" data-f="jpeg" aria-pressed="true">JPEG</button>
+          <button type="button" data-f="webp" aria-pressed="false">WebP</button>
+          <button type="button" data-f="png" aria-pressed="false">PNG</button>
+        </div>
+        <p class="help" id="fmtNote" hidden></p>
+      </div>
+
+      <div class="sec" id="qSec">
+        <div class="row"><label for="quality"><strong>Quality</strong></label><span id="qVal">80</span></div>
+        <input type="range" id="quality" min="1" max="100" value="80">
+        <div class="limit">
+          <label><input type="checkbox" id="limit"> Limit file size to</label>
+          <input type="number" id="limitKB" min="5" step="10" value="500" aria-label="Maximum file size in kilobytes">
+          <span>KB</span>
+        </div>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<div class="veil" id="veil" hidden>
+  <span class="vf c-nw"></span><span class="vf c-ne"></span><span class="vf c-sw"></span><span class="vf c-se"></span>
+  <span>Drop to open this image</span>
+</div>
+<div class="notice" id="notice" role="alert" hidden></div>
+<input type="file" id="file" accept="image/*" hidden>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const el = {
+    empty:$('#empty'), work:$('#work'), topRight:$('#topRight'), fname:$('#fname'),
+    stage:$('#stage'), frame:$('#frame'), photo:$('#photo'), crop:$('#crop'),
+    previewWrap:$('#previewWrap'), result:$('#result'), actualWrap:$('#actualWrap'), actual:$('#actual'),
+    selReadout:$('#selReadout'), vCrop:$('#vCrop'), vPrev:$('#vPrev'),
+    saving:$('#saving'), barfill:$('#barfill'), oSize:$('#oSize'), oDim:$('#oDim'), rSize:$('#rSize'), rDim:$('#rDim'),
+    note:$('#note'), download:$('#download'), chips:$('#chips'), resetCrop:$('#resetCrop'),
+    side:$('#side'), fmtSeg:$('#fmtSeg'), fmtNote:$('#fmtNote'), qSec:$('#qSec'), quality:$('#quality'), qVal:$('#qVal'),
+    limit:$('#limit'), limitKB:$('#limitKB'), file:$('#file'), veil:$('#veil'), notice:$('#notice')
+  };
+
+  const MIN = 16;
+  const TYPES = { jpeg:'image/jpeg', webp:'image/webp', png:'image/png' };
+  const LABELS = { jpeg:'JPEG', webp:'WebP', png:'PNG' };
+  const EXT = { jpeg:'jpg', webp:'webp', png:'png' };
+  const ASPECTS = [['Free',null],['Original','orig'],['1:1',1],['4:3',4/3],['3:4',3/4],['3:2',3/2],['2:3',2/3],['16:9',16/9],['9:16',9/16]];
+  const SIDES = [0,3840,2560,1920,1280,1080,800,640];
+
+  const c1 = document.createElement('canvas'); c1.width = c1.height = 1;
+  const webpOK = c1.toDataURL('image/webp').startsWith('data:image/webp');
+
+  const state = {
+    img:null, url:null, file:null, W:0, H:0,
+    crop:{x:0,y:0,w:0,h:0}, aspect:null, aspectKey:'Free',
+    fmt:'jpeg', quality:80, side:0, limit:false, limitKB:500, autoQ:null, view:'crop'
+  };
+  let resultUrl = null, timer = null, job = 0, drag = null, noticeTimer = null;
+
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+  const fmtBytes = n => n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(n < 102400 ? 1 : 0) + ' KB' : (n/1048576).toFixed(2) + ' MB';
+  const dims = (w,h) => w + ' × ' + h + ' px';
+
+  function notify(msg){
+    el.notice.textContent = msg; el.notice.hidden = false;
+    clearTimeout(noticeTimer); noticeTimer = setTimeout(() => el.notice.hidden = true, 7000);
+  }
+
+  /* ---------- build static controls ---------- */
+  ASPECTS.forEach(([label]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = label; b.dataset.k = label;
+    b.setAttribute('aria-pressed', label === 'Free' ? 'true' : 'false');
+    b.addEventListener('click', () => applyAspectKey(label));
+    el.chips.appendChild(b);
+  });
+  SIDES.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v ? v + ' px' : 'Original size';
+    el.side.appendChild(o);
+  });
+  if (!webpOK) {
+    const b = el.fmtSeg.querySelector('[data-f="webp"]');
+    b.disabled = true; b.title = "This browser can't save WebP";
+  }
+
+  /* ---------- loading ---------- */
+  function loadFile(file){
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { notify("That file isn't an image. Try a JPEG, PNG, WebP, GIF or AVIF file."); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      if (state.url) URL.revokeObjectURL(state.url);
+      state.img = img; state.url = url; state.file = file;
+      state.W = img.naturalWidth; state.H = img.naturalHeight;
+      state.crop = {x:0, y:0, w:state.W, h:state.H};
+      state.aspect = null; state.aspectKey = 'Free'; state.autoQ = null;
+      state.fmt = file.type === 'image/jpeg' ? 'jpeg' : (webpOK ? 'webp' : 'jpeg');
+      el.side.value = '0'; state.side = 0;
+      el.empty.hidden = true; el.work.hidden = false; el.topRight.hidden = false;
+      el.fname.textContent = file.name || 'Pasted image';
+      el.oSize.textContent = fmtBytes(file.size);
+      el.oDim.textContent = dims(state.W, state.H);
+      el.photo.src = url;
+      setView('crop');
+      syncChips(); syncControls(); fit(); scheduleRender();
+      window.scrollTo(0, 0);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); notify("This image couldn't be opened. Try a JPEG, PNG, WebP, GIF or AVIF file."); };
+    img.src = url;
+  }
+
+  /* ---------- layout of the crop box ---------- */
+  const scale = () => el.photo.clientWidth / state.W || 1;
+
+  function fit(){
+    if (!state.img || el.frame.hidden) return;
+    const availW = el.stage.clientWidth - 32;
+    if (availW <= 0) return;
+    const availH = Math.min(window.innerHeight * 0.7, 840);
+    const s = Math.min(availW / state.W, availH / state.H, 2);
+    el.photo.style.width = Math.max(1, Math.round(state.W * s)) + 'px';
+    el.photo.style.height = Math.max(1, Math.round(state.H * s)) + 'px';
+    layout();
+  }
+  function layout(){
+    if (!state.img) return;
+    const s = scale(), c = state.crop;
+    el.crop.style.left = c.x * s + 'px'; el.crop.style.top = c.y * s + 'px';
+    el.crop.style.width = c.w * s + 'px'; el.crop.style.height = c.h * s + 'px';
+    const ic = intCrop();
+    el.selReadout.textContent = state.view === 'crop' ? 'Selection ' + dims(ic.w, ic.h) : '';
+  }
+  new ResizeObserver(fit).observe(el.stage);
+
+  /* ---------- crop geometry ---------- */
+  function cornerRect(ax, ay, px, py){
+    const {W,H} = state, a = state.aspect;
+    const sx = px < ax ? -1 : 1, sy = py < ay ? -1 : 1;
+    let w = Math.abs(px - ax), h = Math.abs(py - ay);
+    const roomW = sx > 0 ? W - ax : ax, roomH = sy > 0 ? H - ay : ay;
+    if (a) {
+      w = Math.max(w, h * a); w = Math.min(w, roomW, roomH * a);
+      w = Math.max(w, Math.min(MIN, roomW, roomH * a)); h = w / a;
+    } else {
+      w = Math.max(w, Math.min(MIN, roomW)); h = Math.max(h, Math.min(MIN, roomH));
+    }
+    return { x: sx > 0 ? ax : ax - w, y: sy > 0 ? ay : ay - h, w, h };
+  }
+
+  function resizeRect(hd, st, dx, dy){
+    const {W,H} = state, a = state.aspect;
+    if (hd.length === 2) {
+      const ax = hd.includes('w') ? st.x + st.w : st.x;
+      const ay = hd.includes('n') ? st.y + st.h : st.y;
+      const px = clamp((hd.includes('w') ? st.x : st.x + st.w) + dx, 0, W);
+      const py = clamp((hd.includes('n') ? st.y : st.y + st.h) + dy, 0, H);
+      return cornerRect(ax, ay, px, py);
+    }
+    let x1 = st.x, y1 = st.y, x2 = st.x + st.w, y2 = st.y + st.h;
+    if (hd === 'e') x2 = clamp(x2 + dx, x1 + MIN, W);
+    if (hd === 'w') x1 = clamp(x1 + dx, 0, x2 - MIN);
+    if (hd === 's') y2 = clamp(y2 + dy, y1 + MIN, H);
+    if (hd === 'n') y1 = clamp(y1 + dy, 0, y2 - MIN);
+    if (!a) return { x:x1, y:y1, w:x2 - x1, h:y2 - y1 };
+    if (hd === 'e' || hd === 'w') {
+      let w = x2 - x1, h = w / a;
+      const cy = st.y + st.h / 2, maxH = 2 * Math.min(cy, H - cy);
+      if (h > maxH) { h = maxH; w = h * a; }
+      return { x: hd === 'e' ? st.x : st.x + st.w - w, y: cy - h / 2, w, h };
+    }
+    let h = y2 - y1, w = h * a;
+    const cx = st.x + st.w / 2, maxW = 2 * Math.min(cx, W - cx);
+    if (w > maxW) { w = maxW; h = w / a; }
+    return { x: cx - w / 2, y: hd === 's' ? st.y : st.y + st.h - h, w, h };
+  }
+
+  function setAspect(a){
+    state.aspect = a;
+    if (a) {
+      const {W,H} = state, c = state.crop, cx = c.x + c.w / 2, cy = c.y + c.h / 2;
+      let w = Math.sqrt(c.w * c.h * a), h = w / a;
+      if (w > W) { w = W; h = w / a; }
+      if (h > H) { h = H; w = h * a; }
+      state.crop = { x:clamp(cx - w/2, 0, W - w), y:clamp(cy - h/2, 0, H - h), w, h };
+    }
+    layout(); scheduleRender();
+  }
+  function applyAspectKey(key){
+    state.aspectKey = key;
+    const v = ASPECTS.find(a => a[0] === key)[1];
+    syncChips();
+    setAspect(v === 'orig' ? state.W / state.H : v);
+  }
+  function syncChips(){
+    el.chips.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === state.aspectKey)));
+  }
+  el.resetCrop.addEventListener('click', () => {
+    state.crop = {x:0, y:0, w:state.W, h:state.H};
+    setAspect(state.aspect);
+  });
+
+  function intCrop(){
+    const c = state.crop;
+    const x = clamp(Math.round(c.x), 0, Math.max(0, state.W - 1));
+    const y = clamp(Math.round(c.y), 0, Math.max(0, state.H - 1));
+    const w = clamp(Math.round(c.w), 1, state.W - x);
+    const h = clamp(Math.round(c.h), 1, state.H - y);
+    return {x, y, w, h};
+  }
+
+  /* ---------- pointer + keyboard ---------- */
+  function toNat(e){
+    const r = el.photo.getBoundingClientRect(), s = scale();
+    return { x: clamp((e.clientX - r.left) / s, 0, state.W), y: clamp((e.clientY - r.top) / s, 0, state.H) };
+  }
+  el.frame.addEventListener('pointerdown', e => {
+    if (!state.img || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const hit = e.target.closest('.crop');
+    const st = {...state.crop};
+    if (hit) drag = { mode: e.target.dataset.h || 'move', sx:e.clientX, sy:e.clientY, start:st };
+    else drag = { mode:'new', a:toNat(e), sx:e.clientX, sy:e.clientY, start:st, moved:false };
+    el.frame.setPointerCapture(e.pointerId);
+    if (hit || e.pointerType === 'mouse') e.preventDefault();
+  });
+  el.frame.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const s = scale(), dx = (e.clientX - drag.sx) / s, dy = (e.clientY - drag.sy) / s;
+    const {W,H} = state, st = drag.start;
+    let r;
+    if (drag.mode === 'move') r = { x:clamp(st.x + dx, 0, W - st.w), y:clamp(st.y + dy, 0, H - st.h), w:st.w, h:st.h };
+    else if (drag.mode === 'new') {
+      if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+      drag.moved = true;
+      const p = toNat(e); r = cornerRect(drag.a.x, drag.a.y, p.x, p.y);
+    } else r = resizeRect(drag.mode, st, dx, dy);
+    state.crop = r; layout(); scheduleRender();
+  });
+  const endDrag = () => { drag = null; };
+  el.frame.addEventListener('pointerup', endDrag);
+  el.frame.addEventListener('pointercancel', endDrag);
+
+  el.crop.addEventListener('keydown', e => {
+    const {W,H} = state, st = state.crop, step = Math.max(1, 1 / scale()) * (e.shiftKey ? 10 : 1);
+    const arrows = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
+    if (arrows[e.key]) {
+      e.preventDefault();
+      const [kx, ky] = arrows[e.key];
+      state.crop = { x:clamp(st.x + kx * step, 0, W - st.w), y:clamp(st.y + ky * step, 0, H - st.h), w:st.w, h:st.h };
+    } else if (['+','=','-','_'].includes(e.key)) {
+      e.preventDefault();
+      const dir = (e.key === '+' || e.key === '=') ? 1 : -1;
+      const ratio = st.w / st.h, cx = st.x + st.w / 2, cy = st.y + st.h / 2;
+      let w = clamp(st.w + dir * 2 * step, MIN, W), h = w / ratio;
+      if (h > H) { h = H; w = h * ratio; }
+      if (h < MIN) { h = MIN; w = h * ratio; }
+      state.crop = { x:clamp(cx - w/2, 0, W - w), y:clamp(cy - h/2, 0, H - h), w, h };
+    } else return;
+    layout(); scheduleRender();
+  });
+
+  /* ---------- views ---------- */
+  function setView(v){
+    state.view = v;
+    el.vCrop.setAttribute('aria-pressed', String(v === 'crop'));
+    el.vPrev.setAttribute('aria-pressed', String(v === 'preview'));
+    el.frame.hidden = v !== 'crop';
+    el.previewWrap.hidden = v !== 'preview';
+    el.actualWrap.hidden = v !== 'preview';
+    if (v === 'crop') fit();
+    layout();
+  }
+  el.vCrop.addEventListener('click', () => setView('crop'));
+  el.vPrev.addEventListener('click', () => setView('preview'));
+  el.actual.addEventListener('change', () => el.previewWrap.classList.toggle('actual', el.actual.checked));
+
+  /* ---------- controls ---------- */
+  function syncControls(){
+    el.fmtSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === state.fmt)));
+    const png = state.fmt === 'png';
+    el.qSec.classList.toggle('off', png);
+    el.quality.disabled = png || state.limit;
+    el.limit.disabled = png; el.limitKB.disabled = png || !state.limit;
+    el.quality.value = state.quality;
+    el.download.textContent = 'Download ' + LABELS[state.fmt];
+    syncQuality();
+    const srcType = state.file ? state.file.type : '';
+    let msg = '';
+    if (png) msg = "PNG is lossless, so quality doesn't apply. Choose a smaller longest side to shrink it.";
+    else if (state.fmt === 'jpeg' && srcType !== 'image/jpeg') msg = "JPEG has no transparency, so transparent areas become white.";
+    el.fmtNote.textContent = msg; el.fmtNote.hidden = !msg;
+  }
+  function syncQuality(){
+    const png = state.fmt === 'png';
+    el.qVal.textContent = png ? 'Not used' :
+      state.limit ? (state.autoQ ? Math.round(state.autoQ * 100) + ' (set by size limit)' : 'Set by size limit') :
+      String(state.quality);
+  }
+  el.fmtSeg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    state.fmt = b.dataset.f; state.autoQ = null; syncControls(); scheduleRender();
+  });
+  el.quality.addEventListener('input', () => { state.quality = +el.quality.value; syncQuality(); scheduleRender(); });
+  el.limit.addEventListener('change', () => { state.limit = el.limit.checked; state.autoQ = null; syncControls(); scheduleRender(); });
+  el.limitKB.addEventListener('input', () => {
+    const v = parseFloat(el.limitKB.value);
+    if (v >= 1) { state.limitKB = v; if (state.limit) scheduleRender(); }
+  });
+  el.side.addEventListener('change', () => { state.side = +el.side.value; scheduleRender(); });
+
+  /* ---------- rendering ---------- */
+  function outDims(c){
+    const m = Math.max(c.w, c.h), s = state.side && state.side < m ? state.side / m : 1;
+    return { ow: Math.max(1, Math.round(c.w * s)), oh: Math.max(1, Math.round(c.h * s)) };
+  }
+  function scheduleRender(){
+    if (!state.img) return;
+    const {ow, oh} = outDims(intCrop());
+    el.rDim.textContent = dims(ow, oh);
+    el.saving.textContent = 'Working…'; el.rSize.textContent = '…'; el.download.disabled = true;
+    clearTimeout(timer); timer = setTimeout(render, 180);
+  }
+  function makeCanvas(c, ow, oh){
+    let cv = document.createElement('canvas'); cv.width = c.w; cv.height = c.h;
+    let ctx = cv.getContext('2d');
+    if (state.fmt === 'jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.w, c.h); }
+    ctx.drawImage(state.img, c.x, c.y, c.w, c.h, 0, 0, c.w, c.h);
+    const step = (tw, th) => {
+      const n = document.createElement('canvas'); n.width = tw; n.height = th;
+      const x = n.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      x.drawImage(cv, 0, 0, tw, th); cv = n;
+    };
+    while (cv.width / 2 >= ow && cv.height / 2 >= oh) step(Math.floor(cv.width / 2), Math.floor(cv.height / 2));
+    if (cv.width !== ow || cv.height !== oh) step(ow, oh);
+    return cv;
+  }
+  const toBlob = (cv, type, q) => new Promise(res => type === TYPES.png ? cv.toBlob(res, type) : cv.toBlob(res, type, q));
+
+  async function fitToSize(cv, type, target, stale){
+    let blob = await toBlob(cv, type, 0.98);
+    if (blob.size <= target) return { blob, q:0.98, missed:false };
+    let lo = 0.05, hi = 0.98;
+    blob = await toBlob(cv, type, lo);
+    if (blob.size > target) return { blob, q:lo, missed:true };
+    let best = { blob, q:lo };
+    for (let i = 0; i < 7; i++) {
+      if (stale()) break;
+      const mid = (lo + hi) / 2, b = await toBlob(cv, type, mid);
+      if (b.size <= target) { best = { blob:b, q:mid }; lo = mid; } else hi = mid;
+    }
+    return { ...best, missed:false };
+  }
+
+  async function render(){
+    const my = ++job, c = intCrop(), {ow, oh} = outDims(c), type = TYPES[state.fmt];
+    try {
+      const cv = makeCanvas(c, ow, oh);
+      let out;
+      if (state.fmt !== 'png' && state.limit) out = await fitToSize(cv, type, state.limitKB * 1024, () => my !== job);
+      else out = { blob: await toBlob(cv, type, state.quality / 100), q: state.quality / 100, missed:false };
+      if (my !== job) return;
+      if (!out.blob) throw new Error('encode failed');
+      showResult(out, ow, oh);
+    } catch (err) {
+      if (my !== job) return;
+      el.saving.textContent = 'Something went wrong';
+      notify("This image couldn't be processed. It may be too large for your browser. Try a smaller longest side.");
+    }
+  }
+
+  function showResult(out, ow, oh){
+    const blob = out.blob, o = state.file.size, r = blob.size;
+    if (resultUrl) URL.revokeObjectURL(resultUrl);
+    resultUrl = URL.createObjectURL(blob);
+    el.result.src = resultUrl;
+    state.autoQ = out.q; syncQuality();
+    el.rSize.textContent = fmtBytes(r); el.rDim.textContent = dims(ow, oh);
+    const pct = (1 - r / o) * 100;
+    el.saving.textContent = r > o ? Math.round((r / o - 1) * 100) + '% larger than the original'
+      : Math.round(pct) < 1 ? 'About the same size' : Math.round(pct) + '% smaller';
+    el.barfill.style.width = Math.min(100, r / o * 100) + '%';
+    el.barfill.classList.toggle('over', r > o);
+    let note = '';
+    if (out.missed) note = "This size can't get under " + state.limitKB + " KB. Choose a smaller longest side.";
+    else if (r > o) note = 'Lower the quality, shrink the longest side, or switch format to make it smaller.';
+    el.note.textContent = note; el.note.hidden = !note;
+    el.download.textContent = 'Download ' + LABELS[state.fmt];
+    el.download.disabled = false;
+    state.result = blob;
+  }
+
+  el.download.addEventListener('click', () => {
+    if (!resultUrl) return;
+    const base = (state.file.name || 'image').replace(/\.[^.]+$/, '') || 'image';
+    const a = document.createElement('a');
+    a.href = resultUrl; a.download = base + '-compressed.' + EXT[state.fmt];
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  /* ---------- input sources ---------- */
+  $('#choose').addEventListener('click', () => el.file.click());
+  $('#another').addEventListener('click', () => el.file.click());
+  el.file.addEventListener('change', () => { loadFile(el.file.files[0]); el.file.value = ''; });
+
+  let depth = 0;
+  const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  window.addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); depth++; el.veil.hidden = false; });
+  window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('dragleave', e => { if (!hasFiles(e)) return; depth = Math.max(0, depth - 1); if (!depth) el.veil.hidden = true; });
+  window.addEventListener('drop', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); depth = 0; el.veil.hidden = true;
+    const files = [...e.dataTransfer.files];
+    loadFile(files.find(f => f.type.startsWith('image/')) || files[0]);
+  });
+  window.addEventListener('paste', e => {
+    const f = [...(e.clipboardData && e.clipboardData.files || [])].find(f => f.type.startsWith('image/'));
+    if (f) { e.preventDefault(); loadFile(f); }
+  });
+})();
+</script>
+</body>
+</html>
