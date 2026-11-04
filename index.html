@@ -1,0 +1,204 @@
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="google-site-verification" content="LXjN_0TOwFUvrX1IDky998NvaM1b0D78YcoqGBb5dls">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Free Image Compressor and Cropper Online (No Upload)</title>
+<meta name="description" content="Compress, resize, rotate and crop JPEG, PNG and WebP images in your browser. Set a target file size and download. Your photos never leave your device.">
+<link rel="canonical" href="https://puccymon.github.io/Test/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Free Image Compressor and Cropper Online (No Upload)">
+<meta property="og:description" content="Compress, resize, rotate and crop JPEG, PNG and WebP images in your browser. Set a target file size and download. Your photos never leave your device.">
+<meta property="og:url" content="https://puccymon.github.io/Test/">
+<meta property="og:site_name" content="Crop &amp; Compress">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231F3FBF' stroke-width='2.6'%3E%3Cpath d='M6 2v16h16'/%3E%3Cpath d='M2 6h16v16'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./tool.css?v=8">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Crop & Compress", "url": "https://puccymon.github.io/Test/", "applicationCategory": "MultimediaApplication", "operatingSystem": "Any", "description": "Compress, resize and crop JPEG, PNG and WebP images in your browser without uploading them.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+</head>
+<body>
+
+<header class="site-nav">
+  <a class="brand" href="/Test/"><span class="brand-mark">▧</span><span>Img<span class="brand-accent">Smaller</span></span></a>
+  <nav aria-label="Main navigation">
+    <a href="/Test/">Home</a>
+    <a href="/Test/batch-image-compressor/">Batch Compressor</a>
+    <a href="/Test/compress-image-to-20kb/">20KB</a>
+    <a href="/Test/compress-image-to-50kb/">50KB</a>
+    <a href="/Test/compress-image-to-100kb/">100KB</a>
+    <a href="/Test/compress-image-to-200kb/">200KB</a>
+    <a href="/Test/crop-image-to-square/">Square Crop</a>
+    <a href="/Test/crop-image-16-9/">16:9 Crop</a>
+    <a href="/Test/guides/">Guides</a>
+    <a href="/Test/about/">About</a>
+    <a href="/Test/contact/">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <section id="empty">
+    <div class="viewfinder">
+      <span class="vf c-nw"></span><span class="vf c-ne"></span><span class="vf c-sw"></span><span class="vf c-se"></span>
+      <h1>Free Online Image Compressor &amp; Resizer</h1>
+      <p>Compress images to 5KB, 10KB, 20KB and beyond. Resize and crop privately in your browser.</p>
+      <button class="btn primary" id="choose" type="button">Add Images</button>
+      <p class="hint">JPEG, PNG, WebP, GIF and AVIF files work.</p>
+    </div>
+  </section>
+
+  <section id="work" class="work" hidden="">
+    <div>
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="View">
+          <button id="vCrop" type="button" aria-pressed="true">Crop</button>
+          <button id="vPrev" type="button" aria-pressed="false">Preview</button>
+        </div>
+        <div class="tb-right">
+          <span id="selReadout"></span>
+          <label id="actualWrap" hidden=""><input type="checkbox" id="actual"> Actual size</label>
+        </div>
+      </div>
+      <div class="stage" id="stage">
+        <div class="frame" id="frame">
+          <img id="photo" alt="Your image with the crop area on top">
+          <div class="crop" id="crop" tabindex="0" role="group" aria-label="Crop area. Arrow keys move it. Plus and minus keys resize it. Hold Shift for bigger steps.">
+            <i class="h h-n" data-h="n"></i><i class="h h-s" data-h="s"></i><i class="h h-w" data-h="w"></i><i class="h h-e" data-h="e"></i>
+            <i class="h h-nw" data-h="nw"></i><i class="h h-ne" data-h="ne"></i><i class="h h-sw" data-h="sw"></i><i class="h h-se" data-h="se"></i>
+          </div>
+        </div>
+        <div class="previewwrap" id="previewWrap" hidden=""><img id="result" alt="Compressed result"></div>
+      </div>
+    </div>
+
+    <aside class="side" aria-label="Settings">
+      <div class="sec">
+        <div class="saving" id="saving" aria-live="polite">Working…</div>
+        <div class="bar"><div class="barfill" id="barfill"></div></div>
+        <dl class="pair">
+          <div><dt>Original</dt><dd id="oSize">—</dd><dd class="sub" id="oDim"></dd></div>
+          <div><dt>Result</dt><dd id="rSize">—</dd><dd class="sub" id="rDim"></dd></div>
+        </dl>
+        <p class="note" id="note" hidden=""></p>
+        <button class="btn primary block" id="compress" type="button">Compress image</button>
+        <button class="btn block" id="download" type="button" disabled="">Download result</button>
+      </div>
+
+      <div class="sec">
+        <h2>Rotate and flip</h2>
+        <div class="tools2">
+          <button class="chip" type="button" id="rotL">Rotate left</button>
+          <button class="chip" type="button" id="rotR">Rotate right</button>
+          <button class="chip" type="button" id="flipH">Flip horizontal</button>
+          <button class="chip" type="button" id="flipV">Flip vertical</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head"><h2>Crop shape</h2><button class="btn small" id="resetCrop" type="button">Reset crop</button></div>
+        <div class="chips" id="chips" role="group" aria-label="Crop shape"><button type="button" class="chip" data-k="Free" aria-pressed="true">Free</button><button type="button" class="chip" data-k="Original" aria-pressed="false">Original</button><button type="button" class="chip" data-k="1:1" aria-pressed="false">1:1</button><button type="button" class="chip" data-k="4:3" aria-pressed="false">4:3</button><button type="button" class="chip" data-k="3:4" aria-pressed="false">3:4</button><button type="button" class="chip" data-k="3:2" aria-pressed="false">3:2</button><button type="button" class="chip" data-k="2:3" aria-pressed="false">2:3</button><button type="button" class="chip" data-k="16:9" aria-pressed="false">16:9</button><button type="button" class="chip" data-k="9:16" aria-pressed="false">9:16</button></div>
+      </div>
+
+      <div class="sec">
+        <h2><label for="side">Longest side</label></h2>
+        <select id="side"><option value="0">Original size</option><option value="3840">3840 px</option><option value="2560">2560 px</option><option value="1920">1920 px</option><option value="1280">1280 px</option><option value="1080">1080 px</option><option value="800">800 px</option><option value="640">640 px</option></select>
+      </div>
+
+      <div class="sec">
+        <h2 id="fmtLabel">Format</h2>
+        <div class="seg" role="group" aria-labelledby="fmtLabel" id="fmtSeg">
+          <button type="button" data-f="jpeg" aria-pressed="true">JPEG</button>
+          <button type="button" data-f="webp" aria-pressed="false">WebP</button>
+          <button type="button" data-f="png" aria-pressed="false">PNG</button>
+        </div>
+        <p class="help" id="fmtNote" hidden=""></p>
+      </div>
+
+      <div class="sec" id="qSec">
+        <div class="row"><label for="quality"><strong>Quality</strong></label><span id="qVal">80</span></div>
+        <input type="range" id="quality" min="1" max="100" value="80">
+        <div class="limit">
+          <label><input type="checkbox" id="limit"> Limit file size to</label>
+          <input type="number" id="limitKB" min="5" step="10" value="500" aria-label="Maximum file size in kilobytes">
+          <span>KB</span>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="content">
+
+    <h2>How to compress and crop an image</h2>
+    <ol>
+      <li>Choose an image, drop it on the page, or paste it from your clipboard.</li>
+      <li>If it is sideways, use Rotate and flip. Then drag the crop box or its handles to frame what you want. Pick a shape such as 1:1 or 16:9 if you need an exact ratio.</li>
+      <li>Choose a format and quality. Or tick Limit file size and enter a target such as 100 KB. The panel at the top shows how much smaller the file is.</li>
+      <li>Open Preview to check the result, then download it.</li>
+    </ol>
+
+    <h2>What it can do</h2>
+    <ul>
+      <li>Crop freely or lock the box to a ratio: 1:1, 4:3, 3:2, 16:9 and their portrait versions.</li>
+      <li>Rotate by 90 degrees and flip horizontally or vertically.</li>
+      <li>Compress JPEG and WebP with a quality slider, or convert to PNG when you need lossless output.</li>
+      <li>Hit a target file size. The tool looks for the highest quality that fits, and shrinks the pixel size only when quality alone is not enough.</li>
+      <li>Resize by longest side, from 3840 px down to 640 px.</li>
+      <li>Process many images at once and download them as one ZIP with the <a href="/Test/batch-image-compressor/">batch compressor</a>.</li>
+    </ul>
+
+    <h2>Your images stay on your device</h2>
+    <p>Everything happens inside your browser. Your photo is never sent to a server, so it is safe to use with personal photos and documents, and you do not spend time waiting for an upload.</p>
+
+    <h2>Popular sizes</h2>
+    <p>Many forms and platforms ask for a specific size or shape. These pages start with the right settings already applied:</p>
+    <ul>
+      <li><a href="/Test/compress-image-to-20kb/">Compress an image to 20KB</a></li>
+      <li><a href="/Test/compress-image-to-50kb/">Compress an image to 50KB</a></li>
+      <li><a href="/Test/compress-image-to-100kb/">Compress an image to 100KB</a></li>
+      <li><a href="/Test/compress-image-to-200kb/">Compress an image to 200KB</a></li>
+      <li><a href="/Test/crop-image-to-square/">Crop an image to a square</a></li>
+      <li><a href="/Test/crop-image-16-9/">Crop an image to 16:9</a></li>
+      <li><a href="/Test/batch-image-compressor/">Compress many images at once</a></li>
+    </ul>
+    <p>New to this? Read the <a href="/Test/guides/">guides</a> on compressing without losing quality, choosing a format, and resizing photos for forms.</p>
+
+    <h2>Questions</h2>
+    <h3>Is it free?</h3>
+    <p>Yes. There is no sign-up, no watermark and no limit on how many images you process.</p>
+    <h3>Which image types can I open?</h3>
+    <p>JPEG, PNG, WebP, GIF and AVIF, depending on what your browser supports. Some browsers cannot open HEIC photos from iPhones, so convert those to JPEG first.</p>
+    <h3>Will the quality drop?</h3>
+    <p>JPEG and WebP are lossy, so a lower quality setting means a smaller file with slightly less detail. Settings between 70 and 85 look almost identical to the original for most photos. Use Preview with Actual size to check before you download.</p>
+    <h3>Why is my PNG not getting smaller?</h3>
+    <p>PNG is lossless, so the quality slider does not apply. To shrink it, reduce the longest side, or switch to WebP or JPEG. Keep PNG for graphics with sharp edges or transparency.</p>
+    <h3>Which format gives the smallest file?</h3>
+    <p>WebP is usually the smallest. JPEG is accepted almost everywhere, which makes it the safe choice for upload forms.</p>
+    <h3>My photo is sideways. Can I fix it?</h3>
+    <p>Yes. Use Rotate left or Rotate right in the side panel. The crop box turns with the image.</p>
+    <h3>Does it work on a phone?</h3>
+    <p>Yes. You can drag the crop box and its corners with your finger.</p>
+
+    <noscript><p>This tool needs JavaScript turned on to work.</p></noscript>
+  </section>
+</main>
+<footer class="foot">
+  <span class="grow">Crop &amp; Compress. Your images stay on your device.</span>
+  <a href="/Test/">Home</a>
+  <a href="/Test/batch-image-compressor/">Batch compressor</a>
+  <a href="/Test/compress-image-to-20kb/">20KB</a>
+  <a href="/Test/compress-image-to-50kb/">50KB</a>
+  <a href="/Test/compress-image-to-100kb/">100KB</a>
+  <a href="/Test/compress-image-to-200kb/">200KB</a>
+  <a href="/Test/crop-image-to-square/">Square crop</a>
+  <a href="/Test/crop-image-16-9/">16:9 crop</a>
+  <a href="/Test/guides/">Guides</a>
+  <a href="/Test/about/">About</a>
+  <a href="/Test/contact/">Contact</a>
+  <a href="/Test/privacy/">Privacy</a>
+  <a href="/Test/terms/">Terms</a>
+</footer>
+<div class="veil" id="veil" hidden="">
+  <span class="vf c-nw"></span><span class="vf c-ne"></span><span class="vf c-sw"></span><span class="vf c-se"></span>
+  <span>Drop to open this image</span>
+</div>
+<div class="notice" id="notice" role="alert" hidden=""></div>
+<input type="file" id="file" accept="image/*" hidden="">
+<script src="/Test/tool.js?v=8"></script></body></html>
